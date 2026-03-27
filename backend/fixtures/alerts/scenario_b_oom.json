@@ -1,0 +1,1 @@
+{"alert_id":"demo-scenario-b","service_name":"user-service","severity":"P0","error_type":"out_of_memory","log_snippet":"java.lang.OutOfMemoryError: GC overhead limit exceeded\n\tat com.example.UserService.processRequest(UserService.java:142)\nERROR [user-service] 3 pods OOM killed in last 5 minutes","timestamp":"2026-03-23T15:10:00Z"}
