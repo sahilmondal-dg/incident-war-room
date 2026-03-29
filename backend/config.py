@@ -12,5 +12,5 @@ AUTO_RESOLVE_THRESHOLD: float = float(os.getenv("AUTO_RESOLVE_THRESHOLD", "0.75"
 CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.7"))
 SPREAD_THRESHOLD: float = float(os.getenv("SPREAD_THRESHOLD", "0.4"))
 MEAN_FLOOR: float = float(os.getenv("MEAN_FLOOR", "0.5"))
-SIMILARITY_THRESHOLD: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.65"))
+SIMILARITY_THRESHOLD: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.60"))
 MAX_LOOPS: int = int(os.getenv("MAX_LOOPS", "2"))

@@ -3,7 +3,7 @@ from langgraph.constants import Send
 
 def fan_out_after_log(state: dict) -> list[Send]:
     return [
-        Send("runbook", {"log_finding": state["log_analysis"]}),
+        Send("runbook", {"log_analysis": state["log_analysis"]}),
         Send("blast_radius", {"alert": state["alert"]}),
         Send("comms", {"alert": state["alert"]}),
     ]

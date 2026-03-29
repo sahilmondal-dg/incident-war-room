@@ -4,7 +4,7 @@ import json
 from langchain_google_vertexai import ChatVertexAI
 
 from config import GCP_PROJECT_ID, GCP_LOCATION, GEMINI_MODEL
-from graph.nodes.log_analyst import now_iso
+from graph.nodes.log_analyst import now_iso, extract_json
 from prompts.comms import COMMS_INITIAL_PROMPT, COMMS_REVISE_PROMPT
 
 llm = ChatVertexAI(
@@ -28,7 +28,7 @@ async def comms_node(state: dict) -> dict:
 
     try:
         response = await asyncio.wait_for(llm.ainvoke(prompt), timeout=30.0)
-        parsed = json.loads(response.content)
+        parsed = json.loads(extract_json(response.content))
         return {
             "comms_drafts": {
                 "status_page": parsed["status_page"],
@@ -63,7 +63,7 @@ async def revise_comms(state: dict) -> dict:
 
     try:
         response = await asyncio.wait_for(llm.ainvoke(prompt), timeout=30.0)
-        parsed = json.loads(response.content)
+        parsed = json.loads(extract_json(response.content))
         return {
             "comms_drafts": {
                 "status_page": parsed["status_page"],

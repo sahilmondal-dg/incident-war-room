@@ -57,6 +57,11 @@ def get_vectorstore() -> Chroma:
 
 def seed_vectorstore() -> int:
     vs = get_vectorstore()
+    # Skip seeding if documents already exist to avoid duplicates on restart
+    if vs._collection.count() > 0:
+        existing = vs._collection.count()
+        print(f"[vectorstore] Already has {existing} documents — skipping seed.")
+        return 0
     docs: list[Document] = []
     for md_file in sorted(_RUNBOOKS_DIR.glob("*.md")):
         content = md_file.read_text(encoding="utf-8")

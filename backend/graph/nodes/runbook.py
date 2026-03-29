@@ -10,7 +10,7 @@ from config import (
     SIMILARITY_THRESHOLD,
 )
 from graph.models import AgentFindingModel
-from graph.nodes.log_analyst import now_iso, timeout_finding, error_finding
+from graph.nodes.log_analyst import now_iso, timeout_finding, error_finding, extract_json
 from prompts.runbook import STEP_EXTRACT_PROMPT
 from tools.vectorstore import get_vectorstore
 
@@ -59,20 +59,21 @@ async def runbook_node(state: dict) -> dict:
         return {"runbook_result": timeout_finding("runbook")}
 
     try:
-        steps = json.loads(response.content)
+        steps = json.loads(extract_json(response.content))
         if not isinstance(steps, list):
             raise ValueError("Expected a JSON array")
     except (json.JSONDecodeError, ValueError) as e:
         return {"runbook_result": error_finding("runbook", str(e))}
 
-    # Convert L2 distance to a similarity-like score clamped to [0, 1]
-    similarity = max(0.0, 1.0 - float(score))
+    # Convert L2 distance to confidence: halve the distance before inverting so
+    # good matches (score ~0.4-0.6) map to 70-80% rather than 40-60%.
+    similarity = max(0.0, 1.0 - float(score) / 2.0)
     finding = AgentFindingModel(
         agent_id="runbook",
         status="success",
         root_cause=doc.metadata.get("title"),
         confidence=similarity,
-        justification=f"Matched at distance {score:.2f} (similarity {similarity:.2f})",
+        justification=f"Matched runbook at L2={score:.3f} (confidence {similarity:.2f})",
         resolution_steps=steps,
         evidence=[doc.page_content[:500]],
         timestamp=now_iso(),

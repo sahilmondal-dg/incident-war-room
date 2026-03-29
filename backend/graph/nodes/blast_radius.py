@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from config import GCP_PROJECT_ID, GCP_LOCATION, GEMINI_MODEL
 from graph.models import AgentFindingModel
-from graph.nodes.log_analyst import now_iso, timeout_finding, error_finding
+from graph.nodes.log_analyst import now_iso, timeout_finding, error_finding, extract_json
 from prompts.blast_radius import BLAST_RADIUS_PROMPT
 
 llm = ChatVertexAI(
@@ -57,7 +57,7 @@ async def blast_radius_node(state: dict) -> dict:
         return {"blast_radius": timeout_finding("blast_radius")}
 
     try:
-        parsed = json.loads(response.content)
+        parsed = json.loads(extract_json(response.content))
     except json.JSONDecodeError as e:
         return {"blast_radius": error_finding("blast_radius", str(e))}
 

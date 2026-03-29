@@ -36,8 +36,8 @@ def detect_conflict(
     ):
         return True, "P0 incident with agent error or timeout."
 
-    # Rule 4: mean confidence below floor
-    mean_conf = mean([log["confidence"], rb["confidence"], br["confidence"]])
+    # Rule 4: mean LLM confidence below floor (exclude vector-based runbook confidence)
+    mean_conf = mean([log["confidence"], br["confidence"]])
     if mean_conf < MEAN_FLOOR:
         return True, "Mean confidence {:.2f} below floor {}.".format(
             mean_conf, MEAN_FLOOR
@@ -51,7 +51,9 @@ def can_auto_resolve(log: dict, rb: dict, br: dict) -> bool:
         return False
     if len(rb.get("resolution_steps", [])) == 0:
         return False
-    mean_conf = mean([log["confidence"], rb["confidence"], br["confidence"]])
+    # Use only LLM-based confidences — runbook confidence is vector-distance-based
+    # and is already gated by the status == "success" check above.
+    mean_conf = mean([log["confidence"], br["confidence"]])
     return mean_conf >= AUTO_RESOLVE_THRESHOLD
 
 
@@ -144,7 +146,7 @@ async def coordinator_arbiter_node(state: dict) -> dict:
 
     # Path 3: no conflict + auto-resolve conditions met
     if can_auto_resolve(log, rb, br):
-        revised = await revise_comms(state)
+        revised = await revise_comms({**state, "final_decision": "auto_resolve"})
         return {
             "conflict_detected": False,
             "final_decision": "auto_resolve",

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 from datetime import datetime, timezone
 
 from langchain_google_vertexai import ChatVertexAI
@@ -15,6 +16,15 @@ llm = ChatVertexAI(
     location=GCP_LOCATION,
     temperature=0.1,
 )
+
+
+def extract_json(text: str) -> str:
+    """Strip markdown code fences if the LLM wraps the JSON response."""
+    text = text.strip()
+    match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
+    if match:
+        return match.group(1).strip()
+    return text
 
 
 def now_iso() -> str:
@@ -54,9 +64,15 @@ async def log_analyst_node(state: dict) -> dict:
     if loop_count > 0 and runbook_result:
         rb_status = runbook_result.get("status", "unknown")
         rb_root_cause = runbook_result.get("root_cause") or "none"
+        conflict_reason = state.get("conflict_reason") or ""
         extra_context = (
-            f"\nPRIOR RUNBOOK SEARCH: status={rb_status}, match={rb_root_cause}. "
-            "Reconsider your diagnosis.\n"
+            f"\nPRIOR ATTEMPT FEEDBACK (loop {loop_count}):\n"
+            f"  - Runbook search: status={rb_status}, matched={rb_root_cause}\n"
+            f"  - Conflict reason: {conflict_reason}\n"
+            "Your previous root_cause classification led to a conflict. "
+            "Look deeper — what INFRASTRUCTURE failure is causing the surface-level symptoms? "
+            "Shift your root_cause classification toward the underlying cause (e.g. network, upstream, db_timeout) "
+            "rather than the symptom layer (e.g. auth).\n"
         )
     else:
         extra_context = ""
@@ -74,7 +90,7 @@ async def log_analyst_node(state: dict) -> dict:
         return {"log_analysis": timeout_finding("log_analyst")}
 
     try:
-        parsed = json.loads(response.content)
+        parsed = json.loads(extract_json(response.content))
     except json.JSONDecodeError as e:
         return {"log_analysis": error_finding("log_analyst", str(e))}
 
