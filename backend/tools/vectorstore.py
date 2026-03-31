@@ -5,8 +5,24 @@ from pathlib import Path
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_google_vertexai import VertexAIEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from config import EMBEDDING_MODEL, GCP_LOCATION, GCP_PROJECT_ID, SIMILARITY_THRESHOLD
+# from config import EMBEDDING_MODEL, GCP_LOCATION, GCP_PROJECT_ID, SIMILARITY_THRESHOLD
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GCP_PROJECT_ID: str = os.environ["GCP_PROJECT_ID"]
+GCP_LOCATION: str = os.getenv("GCP_LOCATION", "us-central1")
+EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-004")
+SIMILARITY_THRESHOLD: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.60"))
+
+_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=50,
+    separators=["\n## ", "\n### ", "\n\n", "\n", " "],
+)
 
 _vectorstore: Chroma | None = None
 
@@ -74,9 +90,12 @@ def seed_vectorstore() -> int:
             if isinstance(v, list):
                 metadata[k] = ", ".join(v)
         docs.append(Document(page_content=body, metadata=metadata))
-    if docs:
-        vs.add_documents(docs)
-    return len(docs)
+    if not docs:
+        return 0
+    chunks = _splitter.split_documents(docs)
+    vs.add_documents(chunks)
+    print(f"[vectorstore] Seeded {len(docs)} runbooks → {len(chunks)} chunks.")
+    return len(chunks)
 
 
 # Alias used by main.py startup: `from tools.vectorstore import seed`
@@ -111,7 +130,7 @@ def calibrate() -> None:
 if __name__ == "__main__":
     if "--seed" in sys.argv:
         n = seed_vectorstore()
-        print(f"Seeded {n} documents")
+        print(f"Seeded {n} chunks")
     elif "--calibrate" in sys.argv:
         calibrate()
     else:
